@@ -14,10 +14,22 @@ namespace RunResults
         
         private static readonly int ITEMS_PER_PAGE = 1000;
 
-        public static readonly int SYNC_INTERVAL = 1;
+        private static readonly int SYNC_INTERVAL = 1;
+
+        private static string tcs10k2014 = "timing_r1405_benw10k_elite";
+
         static void Main(string[] args)
         {
-            string eventId = "timing_r1405_benw10k_elite";
+            
+            string eventId; 
+
+            Console.WriteLine("Enter Event id: ");
+            eventId = Console.ReadLine();
+
+            if (eventId == "")
+            {
+                eventId = tcs10k2014;
+            }
 
             Dictionary<int, int> bibRanges = new Dictionary<int, int>(1);
 
