@@ -11,8 +11,7 @@ namespace RunResults
 {
     class Program
     {
-        private static readonly string CAHCE_FILE = "cache.dat";
-        private static readonly string CAHCE_FILE_XLS = "cache.csv";
+        
         private static readonly int ITEMS_PER_PAGE = 1000;
 
         public static readonly int SYNC_INTERVAL = 1;
@@ -57,7 +56,7 @@ namespace RunResults
             SortedDictionary<int, Runner> sortedRunners = new SortedDictionary<int, Runner>();
 
             //Load runners if have already got them in a previous attempt.
-            LoadSortedRunners(sortedRunners);
+            Cache.LoadSortedRunners(sortedRunners);
 
             Console.WriteLine("Starting to work..");
             int completed = 0;
@@ -91,31 +90,16 @@ namespace RunResults
                             continue;
                         }
 
-                        //if (runner.IsValid)
-                        //{
-                            /*
-                            for (int i = 0; i < 10002; i++)
-                            {
-                                completed_success++;
-                                sortedRunners.Add(i, runner);
-                            }
-                             * */
-                            
-                            completed_success++;
+                        completed_success++;
 
-                            sortedRunners.Add(bibNo, runner);
-                            
-                        //}
-                        //else
-                        //{
-                         //   completed_invalid++;
-                        //}
+                        sortedRunners.Add(bibNo, runner);
+                       
                         Console.WriteLine("Completed {0} entries", completed);
 
                         if (completed % SYNC_INTERVAL == 0)
                         {
                             Console.WriteLine("Serializing {0} items", sortedRunners.Count);
-                            WriteSortedRunners(sortedRunners);
+                            Cache.WriteSortedRunners(sortedRunners);
                         }
                     }
                 }
@@ -124,22 +108,15 @@ namespace RunResults
             {
                 Console.WriteLine(exp.Message);
                 Console.WriteLine("Serializing {0} items", sortedRunners.Count);
-                WriteSortedRunners(sortedRunners);
+                Cache.WriteSortedRunners(sortedRunners);
             }
             //Got all runners.
             CreateHtmlPage(sortedRunners);
         }
 
-        private static void WriteSortedRunners(SortedDictionary<int, Runner> sortedRunners)
-        {
-            WriteSortedRunnersToCahce(sortedRunners);
-            WriteSortedRunnersToXls(sortedRunners);
-        }
+    
 
-        private static void LoadSortedRunners(SortedDictionary<int, Runner> sortedRunners)
-        {
-            LoadSortedRunnersFromCache(sortedRunners);
-        }
+        
 
         private static void CreateHtmlPage(SortedDictionary<int, Runner> zombiedSortedRunners)
         {
@@ -240,123 +217,6 @@ namespace RunResults
             return line;
         }
 
-        private static void WriteSortedRunnersToXls(SortedDictionary<int, Runner> sortedRunners)
-        {
-            if ((sortedRunners == null) || (sortedRunners.Count == 0))
-            {
-                return;
-            }
-            try
-            {
-                using (StreamWriter writer = new StreamWriter(CAHCE_FILE_XLS, false))
-                {
-                    foreach (var pair in sortedRunners)
-                    {
-                        Runner r = pair.Value;
-                        string row =
-                            String.Format("{0},{1},{2},{4},{3},{5},{6},{7},{8}", r.Rank, r.Name, r.BibNo, r.Gender, r.GenderRank,
-                            r.Category, r.CategoryRank,Csv.Escape(r.NetTime), Csv.Escape(r.GrossTime));
-                        writer.WriteLine(row);
-                    }
-                }
-            }
-            catch (Exception exp)
-            {
-                Console.WriteLine("Could not write runner. Reason = {0}", exp.Message);
-            }
-            
-        }
-        private static void LoadSortedRunnersFromXls(SortedDictionary<int, Runner> sortedRunners)
-        {
-            if (sortedRunners == null)
-            {
-                sortedRunners = new SortedDictionary<int, Runner>();
-            }
-
-            try
-            {
-                string[] lines = System.IO.File.ReadAllLines(CAHCE_FILE_XLS);
-                foreach (string line in lines)
-                {
-                    Runner r = new Runner();
-                    string[] split = line.Split(',');
-                    
-                    r.Rank = split[0];
-                    r.Name = split[1];
-                    r.BibNo = split[2];
-                    Int32 tmp; Int32.TryParse(split[2], out tmp); r.BibNoInt = tmp;
-                    r.Gender = split[3];
-                    r.GenderRank = split[4];
-                    r.Category = split[5];
-                    r.CategoryRank = split[6];
-                    r.NetTime = split[7];
-                    r.GrossTime = split[8];
-                    sortedRunners.Add(r.BibNoInt, r);
-                }
-
-            }
-
-            
-            catch (FileNotFoundException )
-            {
-                Console.WriteLine("No cache file found");
-            }
-            catch (Exception exp)
-            {
-                Console.WriteLine("Could not load runner. Reason = {0}", exp.Message);
-            }
-        }       
-
-        private static void WriteSortedRunnersToCahce(SortedDictionary<int, Runner> sortedRunners)
-        {
-            if ((sortedRunners == null) || (sortedRunners.Count == 0))
-            {
-                return;
-            }
-            using (FileStream fs = new FileStream(CAHCE_FILE, FileMode.OpenOrCreate))
-            {
-                using (BinaryWriter writer = new BinaryWriter(fs))
-                {
-                    IFormatter formatter = new BinaryFormatter();
-                    writer.Write(sortedRunners.Count);
-                    foreach (var pair in sortedRunners)
-                    {
-                        writer.Write(pair.Key);
-                        formatter.Serialize(fs, pair.Value);
-                    }
-                }
-            }
-        }
-        
-        private static void LoadSortedRunnersFromCache(SortedDictionary<int, Runner> sortedRunners)
-        {
-            if (sortedRunners == null)
-            {
-                sortedRunners = new SortedDictionary<int, Runner>();
-            }
-            IFormatter formatter = new BinaryFormatter();
-
-            try
-            {
-                using (FileStream fs = new FileStream(CAHCE_FILE, FileMode.Open))
-                {
-                    using (BinaryReader reader = new BinaryReader(fs))
-                    {
-                        int count = reader.ReadInt32();
-                        for (int i = 0; i < count; i++)
-                        {
-                            int bibNoInt = reader.ReadInt32();
-                            Runner runner = (Runner)formatter.Deserialize(fs);
-                            sortedRunners.Add(bibNoInt, runner);
-                        }
-                    }
-                }
-            }
-            catch (FileNotFoundException )
-            {
-                Console.WriteLine("No cache file found");
-            }
-        }       
     }
 
 
