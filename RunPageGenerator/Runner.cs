@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace RunResults
 {
     [Serializable]
-    class Runner
+    public class Runner
     {
         public string Rank { get; set; }
 
