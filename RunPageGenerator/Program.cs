@@ -14,9 +14,10 @@ namespace RunResults
         
         private static readonly int ITEMS_PER_PAGE = 1000;
 
-        private static readonly int SYNC_INTERVAL = 1;
+        private static readonly int SYNC_INTERVAL = 10;
 
         private static string tcs10k2014 = "timing_r1405_benw10k_elite";
+        private static string tcs10k2015 = "timing_r1505_benw10k_open_10k";
 
         static void Main(string[] args)
         {
@@ -28,7 +29,7 @@ namespace RunResults
 
             if (eventId == "")
             {
-                eventId = tcs10k2014;
+                eventId = tcs10k2015;
             }
 
             Dictionary<int, int> bibRanges = new Dictionary<int, int>(1);
@@ -65,10 +66,10 @@ namespace RunResults
                 Environment.Exit(1);
             }
 
-            SortedDictionary<int, Runner> sortedRunners = new SortedDictionary<int, Runner>();
+            SortedDictionary<int, Runner> bibSortedRunners = new SortedDictionary<int, Runner>();
 
             //Load runners if have already got them in a previous attempt.
-            Cache.LoadSortedRunners(sortedRunners);
+            Cache.LoadSortedRunners(bibSortedRunners);
 
             Console.WriteLine("Starting to work..");
             int completed = 0;
@@ -82,7 +83,7 @@ namespace RunResults
                 {
                     for (int bibNo = pair.Key; bibNo <= pair.Value; bibNo++)
                     {
-                        if (sortedRunners.ContainsKey(bibNo))
+                        if (bibSortedRunners.ContainsKey(bibNo))
                         {
                             //We already have it.
                             continue;
@@ -92,7 +93,7 @@ namespace RunResults
                         Runner runner = new Runner(bibNo.ToString(), eventId);
                         try
                         {
-                            Console.WriteLine("Getting runner # {0}", bibNo);
+                            //Console.WriteLine("Getting runner # {0}", bibNo);
                             runner.ParseAndLoad();
                         }
                         catch (Exception exp)
@@ -104,26 +105,30 @@ namespace RunResults
 
                         completed_success++;
 
-                        sortedRunners.Add(bibNo, runner);
+                        //Add based on bibNo.
+                        bibSortedRunners.Add(bibNo, runner);
                        
-                        Console.WriteLine("Completed {0} entries", completed);
+                        //Console.WriteLine("Completed {0} entries", completed);
 
                         if (completed % SYNC_INTERVAL == 0)
                         {
-                            Console.WriteLine("Serializing {0} items", sortedRunners.Count);
-                            Cache.WriteSortedRunners(sortedRunners);
+                            Console.WriteLine("....Serializing {0} items ....", bibSortedRunners.Count);
+                            Cache.WriteSortedRunners(bibSortedRunners);
                         }
                     }
                 }
+                //Done. Write finally again.
+                Console.WriteLine("Serializing {0} items", bibSortedRunners.Count);
+                Cache.WriteSortedRunners(bibSortedRunners);
             }
             catch (Exception exp)
             {
                 Console.WriteLine(exp.Message);
-                Console.WriteLine("Serializing {0} items", sortedRunners.Count);
-                Cache.WriteSortedRunners(sortedRunners);
+                Console.WriteLine("Serializing {0} items", bibSortedRunners.Count);
+                Cache.WriteSortedRunners(bibSortedRunners);
             }
             //Got all runners.
-            CreateHtmlPage(sortedRunners);
+            CreateHtmlPage(bibSortedRunners);
         }
 
     
@@ -132,24 +137,29 @@ namespace RunResults
 
         private static void CreateHtmlPage(SortedDictionary<int, Runner> zombiedSortedRunners)
         {
-            SortedDictionary<int, Runner> sortedRunners = new SortedDictionary<int, Runner>();
+            SortedDictionary<int, Runner> rankSortedRunners = new SortedDictionary<int, Runner>();
             //sorted runners conatains lots of invalid runners. Runners who dont exist. Remove them
             foreach (var pair in zombiedSortedRunners)
             {
                 if (pair.Value.IsValid)
                 {
-                    sortedRunners.Add(pair.Key, pair.Value);
+                    //Console.WriteLine("Rank = {0}, RankInt = {1}", pair.Value.Rank, pair.Value.RankInt);
+                    rankSortedRunners.Add(pair.Value.RankInt, pair.Value);
+                }
+                else
+                {
+                   // Console.WriteLine("Invalid:  Rank = {0}, RankInt = {1} Bib = {2}", pair.Value.Rank, pair.Value.RankInt, pair.Value.BibNo);
                 }
             }
 
             //How many pages?
-            int pages = sortedRunners.Count / ITEMS_PER_PAGE;
-            if (sortedRunners.Count % ITEMS_PER_PAGE !=0 )
+            int pages = rankSortedRunners.Count / ITEMS_PER_PAGE;
+            if (rankSortedRunners.Count % ITEMS_PER_PAGE !=0 )
             {
                 pages++;
             }
 
-            Console.WriteLine("Total runners = {0}. Number of pages = {1}", sortedRunners.Count, pages);
+            Console.WriteLine("Total runners = {0}. Number of pages = {1}", rankSortedRunners.Count, pages);
 
             string text = System.IO.File.ReadAllText(@"..\..\sample_table.html");
             string[] split = text.Split('$');
@@ -162,7 +172,7 @@ namespace RunResults
                 //if last page, then we dont have all elements
                 if (page == pages)
                 {
-                    endIndex = startIndex + (sortedRunners.Count % ITEMS_PER_PAGE) - 1;
+                    endIndex = startIndex + (rankSortedRunners.Count % ITEMS_PER_PAGE) - 1;
                 }
 
                 Console.WriteLine("Generating page# {0}. Start index = {1} End index = {2}",
@@ -183,7 +193,7 @@ namespace RunResults
                     //foreach (var rpair in sortedRunners)
                     for (int i = startIndex; i <= endIndex; i++)
                     {
-                        var rpair = sortedRunners.ElementAt(i);
+                        var rpair = rankSortedRunners.ElementAt(i);
                         Runner r = rpair.Value;
                         string row =
                             String.Format(@"<tr>
@@ -196,7 +206,7 @@ namespace RunResults
 <td>{6}</td>
 <td>{7}</td>
 <td>{8}</td>
-", r.Rank, r.Name, r.BibNo, r.Gender, r.GenderRank, r.Category, r.CategoryRank, r.NetTime, r.GrossTime);
+", r.Rank, r.NameHref, r.BibNo, r.Gender, r.GenderRank, r.Category, r.CategoryRank, r.NetTime, r.GrossTime);
                         writer.Write(row);
                     }
 
