@@ -13,7 +13,11 @@ namespace RunResults
     {
         public string Rank { get; set; }
 
+        public int RankInt { get; set; }
+
         public string Name { get; set; }
+
+        public string NameHref { get; set; }
 
         public string BibNo { get; set; }
 
@@ -68,13 +72,13 @@ namespace RunResults
                         // Display the content.
                         //Console.WriteLine(responseFromServer);
                         // Clean up the streams and the response.
-                        ParseResponse(responseFromServer);
+                        ParseResponse(responseFromServer, url);
                     }
                 }
             }
         }
 
-        public void ParseResponse(string responseFromServer)
+        public void ParseResponse(string responseFromServer, string url)
         {
             //responseFromServer = System.IO.File.ReadAllText(@"..\..\test.html");
 
@@ -120,6 +124,7 @@ namespace RunResults
                 if (IsName(tableCells[i]))
                 {
                     Name = GetName(tableCells, i);
+                    NameHref = "<a href=\"" + url + "\">" + Name + "</a>";
                 }
 
                 if (IsGender(tableCells[i]))
@@ -135,6 +140,7 @@ namespace RunResults
                 if (IsRank(tableCells[i]))
                 {
                     Rank = GetRank(tableCells, i);
+                    RankInt = GetRankInt(Rank);
                 }
 
                 if (IsCategoryRank(tableCells[i]))
@@ -158,6 +164,23 @@ namespace RunResults
                 }
             }
 
+        }
+
+        private int GetRankInt(string Rank)
+        {
+            string[] split = Rank.Split('/');
+
+            //Hack: Total runners = 7772. Rank will be in the format xx / 7772. If not 7772, its not in open category. Ignore them.
+            int tmp = 0;
+            Int32.TryParse(split[1].Trim(), out tmp);
+            if ((tmp == 0)  || (tmp != 7772))
+            {
+                return 0;
+            }
+
+            tmp = 0;
+            Int32.TryParse(split[0].Trim(), out tmp);
+            return tmp;
         }
 
         private bool IsGrossTime(string p)
@@ -317,10 +340,9 @@ namespace RunResults
         {
             get
             {
-                return (BibNoInt != 0);
+                return ((BibNoInt != 0) && (RankInt != 0));
             }         
         }
 
-       
     }
 }
