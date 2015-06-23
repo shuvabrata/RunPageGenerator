@@ -129,10 +129,40 @@ namespace RunResults
             }
             //Got all runners.
             CreateHtmlPage(bibSortedRunners);
+            CreateCsvFile(bibSortedRunners);
         }
 
     
+        private static void CreateCsvFile(SortedDictionary<int, Runner> zombiedSortedRunners)
+        {
+            SortedDictionary<int, Runner> rankSortedRunners = new SortedDictionary<int, Runner>();
+            //sorted runners conatains lots of invalid runners. Runners who dont exist. Remove them
+            foreach (var pair in zombiedSortedRunners)
+            {
+                if (pair.Value.IsValid)
+                {
+                    //Console.WriteLine("Rank = {0}, RankInt = {1}", pair.Value.Rank, pair.Value.RankInt);
+                    rankSortedRunners.Add(pair.Value.RankInt, pair.Value);
+                }
+                else
+                {
+                    // Console.WriteLine("Invalid:  Rank = {0}, RankInt = {1} Bib = {2}", pair.Value.Rank, pair.Value.RankInt, pair.Value.BibNo);
+                }
+            }
 
+            using (StreamWriter writer = new StreamWriter("run" + ".csv", false))
+            {
+                writer.WriteLine("Rank, Name, BibNo, Gender, GenderRank, Category, CategoryRank, NetTime, GrossTime");
+                foreach (var pair in rankSortedRunners)
+                {
+                    Runner r = pair.Value;
+                    string row =
+                            String.Format(@"{0},{1},{2},{3},{4},{5},{6},{7},{8}", 
+                            r.Rank, r.Name, r.BibNo, r.Gender, r.GenderRank, r.Category, r.CategoryRank,Csv.Escape( r.NetTime), Csv.Escape(r.GrossTime));
+                    writer.WriteLine(row);
+                }
+            }
+        }
         
 
         private static void CreateHtmlPage(SortedDictionary<int, Runner> zombiedSortedRunners)

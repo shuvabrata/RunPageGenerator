@@ -173,7 +173,7 @@ namespace RunResults
             //Hack: Total runners = 7772. Rank will be in the format xx / 7772. If not 7772, its not in open category. Ignore them.
             int tmp = 0;
             Int32.TryParse(split[1].Trim(), out tmp);
-            if ((tmp == 0)  || (tmp != 7772))
+            if ((tmp == 0)  || (tmp != 265))
             {
                 return 0;
             }
@@ -235,7 +235,7 @@ namespace RunResults
 
         private bool IsRank(string p)
         {
-            return p.Contains("Rank") && !p.Contains(":") && !IsCategoryRank(p) && !IsGenderRank(p);
+            return p.Contains("Rank") && !p.Contains(":") && !IsCategoryRank(p) && !IsGenderRank(p) && !p.Contains("Ranka");
         }
 
         private string GetRank(List<string> tableCells, int i)
